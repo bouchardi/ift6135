@@ -180,10 +180,11 @@ def main(model, trainset, validset, epochs):
             for j in range(len(target[1])):
                 if targ[j] == pred[j]:
                     acc_ = acc_+1
-        acc[epoch,0]=(acc_/len(validset.dataset))
+        acc[epoch,0]=(acc_/len(validset))
         print(acc)
         print(f'Valid loss={loss / (i + 1)} at epoch {epoch}')
-   
+    #init_=model.init
+    #np.savetxt(init_+'.txt', loss_vector, delimiter=',', fmt='%10.5f')    
 
 if __name__ == '__main__':
     epochs =13
@@ -192,18 +193,9 @@ if __name__ == '__main__':
     model = NN()
     trainset, validset = load_dataset(batch_size)
     
-    for init 
-    losses = main(model=model,
+    
+    main(model=model,
          trainset=trainset,
          validset=validset,
          epochs=epochs)
-    if
-        plt.ylabel('Average Loss')
-    plt.xlabel('Epoch')
-    plt.title('Initialization Effect')
-    plt.grid(True)
-    plt.xlim(0, 9)
-    plt.plot(t, zeros,'r', t, normal, 'b', t, glorot, 'k')
-    plt.legend(('Zero','Normal','Glorot'),loc='upper right')
-    plt.show() 
     
