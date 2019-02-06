@@ -3,10 +3,11 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
 from torchvision import transforms
+#from sklearn.metrics import accuracy_score
+
 
 # TODO:
 # - Refactor forward and backward methods to generalize to L layers
-# - Enable script args input to easily run experiments with different hyperparameters
 # - Add an extra dimension to W and X for the bias!
 
 
@@ -15,29 +16,43 @@ class NN(object):
     def __init__(self,
                  input_size=784,
                  output_size=10,
-                 hidden_layers_size=[1024, 2048],
-                 init='random',
-                 lr=1.e-3):
+                 hidden_layers_size=[512, 1024],
+                 init='glorot',
+                 lr=1.e-2):
 
         self.input_size = input_size
         self.hidden_layers_size = hidden_layers_size
         self.output_size = output_size
         self.lr = lr
         self.train = False
+        self.init=init
 
         self._initialize_weights(init)
 
-    def _initialize_weights(self, init_method='random'):
+    def _initialize_weights(self, init_method):
         def _random(neurons_in, neurons_out):
             return np.random.normal(0, 0.01, (neurons_in, neurons_out))
+        def _zeros(neurons_in, neurons_out):
+            return np.zeros((neurons_in, neurons_out))
+        def _normal(neurons_in, neurons_out):
+            return np.random.normal(0, 1, (neurons_in, neurons_out))
+        def _glorot(neurons_in, neurons_out,low,high):
+            return np.random.uniform(low,high,(neurons_in, neurons_out))
 
         # Not super clean...
         init_weights = {
-                'random': _random
+                'random': _random,
+                'zeros': _zeros,
+                'normal':_normal,
+                'glorot': _glorot
                 }
 
         sizes = [self.input_size] + self.hidden_layers_size + [self.output_size]
-        self.W = [init_weights[init_method](sizes[i], sizes[i+1]) for i in range(len(sizes) - 1 )]
+        if (init_method =='random') or (init_method =='zeros') or (init_method == 'normal'):
+            self.W = [init_weights[init_method](sizes[i], sizes[i+1]) for i in range(len(sizes) - 1 )]
+        else:
+            self.W = [init_weights[init_method](sizes[i], sizes[i+1], -np.sqrt(6/(sizes[i]+sizes[i+1])),np.sqrt(6/(sizes[i]+sizes[i+1]))) for i in range(len(sizes) - 1 )]
+
 
     def forward(self, X):
         h0 = X
@@ -134,7 +149,12 @@ def preprocess(batch, n_class=10):
 
 
 def main(model, trainset, validset, epochs):
+    loss_vector = np.zeros([epochs,1])
+    acc=np.zeros([epochs,1])
+
     for epoch in range(epochs):
+        acc_=0
+
         # Training
         loss = 0
         model.training()
@@ -144,6 +164,7 @@ def main(model, trainset, validset, epochs):
             grads = model.backward(target, prediction, cache)
             model.update_weights(grads)
             loss += model.loss(prediction, target)
+        loss_vector[epoch,0] = loss/(i+1)
         print(f'Train loss={loss / (i + 1)} at epoch {epoch}')
 
         # Validation
@@ -153,17 +174,27 @@ def main(model, trainset, validset, epochs):
             model_input, target = preprocess(batch)
             prediction, _ = model.forward(model_input)
             loss += model.loss(prediction, target)
+            targ = np.argmax(np.asarray(target), axis=0)
+            pred = np.argmax(np.asarray(prediction), axis=0)
+            for j in range(len(target[1])):
+                if targ[j] == pred[j]:
+                    acc_ = acc_+1
+        acc[epoch,0]=(acc_/len(validset))
+        print(acc)
         print(f'Valid loss={loss / (i + 1)} at epoch {epoch}')
-
+    #init_=model.init
+    #np.savetxt(init_+'.txt', loss_vector, delimiter=',', fmt='%10.5f')
 
 if __name__ == '__main__':
-    epochs = 10
+    epochs =13
     batch_size = 128
 
     model = NN()
     trainset, validset = load_dataset(batch_size)
 
+
     main(model=model,
          trainset=trainset,
          validset=validset,
          epochs=epochs)
+
