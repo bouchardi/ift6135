@@ -53,27 +53,23 @@ class NN(object):
         else:
             self.W = [init_weights[init_method](sizes[i], sizes[i+1], -np.sqrt(6/(sizes[i]+sizes[i+1])),np.sqrt(6/(sizes[i]+sizes[i+1]))) for i in range(len(sizes) - 1 )]
 
+        self.b = [np.zeros((1, neurons)) for neurons in sizes[1:]]
+
+    def _add_bias(self, h, W, b):
+        h = np.concatenate([h, np.ones((1, h.shape[1]))], axis=0)
+        W = np.concatenate([W, b])
+        return h, W
 
     def forward(self, X):
-        h0 = X
-        a1 = np.dot(self.W[0].T, h0)
-        h1 = self._sigmoid(a1)
-        a2 = np.dot(self.W[1].T, h1)
-        h2 = self._sigmoid(a2)
-        a3 = np.dot(self.W[2].T, h2)
-        h3 = self._softmax(a3)
-
-        cache = {
-            'h0': h0,
-            'a1': a1,
-            'h1': h1,
-            'a2': a2,
-            'h2': h2,
-            'a3': a3,
-            'h3': h3,
-            }
-
-        return h3, cache
+        h = X
+        cache = [(h, None)]
+        for W, b in zip(self.W, self.b):
+            # Add bias
+            hb, Wb = self._add_bias(h, W, b)
+            a = np.dot(Wb.T, hb)
+            h = self._sigmoid(a)
+            cache.append((h, a))
+        return h, cache
 
     def _sigmoid(self, X):
          return 1 / (1 + np.exp(-X))
@@ -93,17 +89,17 @@ class NN(object):
     def backward(self, target, prediction, cache):
         grad_f = - (target - prediction)
 
-        grad_W3 = np.dot(grad_f, cache['h2'].T)
+        grad_W3 = np.dot(grad_f, cache[2][0].T)
         grad_b3 = grad_f
         grad_h2 = np.dot(self.W[2], grad_f)
-        grad_a2 = np.multiply(grad_h2, self._sigmoid_deriv(cache['a2']))
+        grad_a2 = np.multiply(grad_h2, self._sigmoid_deriv(cache[2][1]))
 
-        grad_W2 = np.dot(grad_a2, cache['h1'].T)
+        grad_W2 = np.dot(grad_a2, cache[1][0].T)
         grad_b2 = grad_a2
         grad_h1 = np.dot(self.W[1], grad_a2)
-        grad_a1 = np.multiply(grad_h1, self._sigmoid_deriv(cache['a1']))
+        grad_a1 = np.multiply(grad_h1, self._sigmoid_deriv(cache[1][1]))
 
-        grad_W1 = np.dot(grad_a1, cache['h0'].T)
+        grad_W1 = np.dot(grad_a1, cache[0][0].T)
         grad_b1 = grad_a1
 
         return [grad_W1.T, grad_W2.T, grad_W3.T]
