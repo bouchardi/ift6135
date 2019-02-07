@@ -3,7 +3,8 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
 from torchvision import transforms
-#from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+
 
 
 # TODO:
@@ -17,8 +18,8 @@ class NN(object):
                  input_size=784,
                  output_size=10,
                  hidden_layers_size=[512, 1024],
-                 init='glorot',
-                 lr=1.e-2):
+                 init='zeros',
+                 lr=1.e-3):
 
         self.input_size = input_size
         self.hidden_layers_size = hidden_layers_size
@@ -138,13 +139,24 @@ def preprocess(batch, n_class=10):
     target_one_hot[target, np.arange(target.shape[0])] = 1
     return model_input, target_one_hot
 
+def plot_loss(loss_vector):
+    
+    t = np.arange(loss_vector.size)
+    plt.ylabel('Average Loss')
+    plt.xlabel('Epoch')
+    plt.title('Initialization Effect')
+    plt.grid(True)
+    plt.xlim(0, 9)
+    plt.plot(t, loss_vector)
+    plt.legend(('Zero','Normal','Glorot'),loc='upper right')
+    plt.show()
+
 
 def main(model, trainset, validset, epochs):
     loss_vector = np.zeros([epochs,1])
-    acc=np.zeros([epochs,1])
 
     for epoch in range(epochs):
-        acc_=0
+        result=0
 
         # Training
         loss = 0
@@ -167,25 +179,27 @@ def main(model, trainset, validset, epochs):
             loss += model.loss(prediction, target)
             targ = np.argmax(np.asarray(target), axis=0)
             pred = np.argmax(np.asarray(prediction), axis=0)
-            for j in range(len(target[1])):
-                if targ[j] == pred[j]:
-                    acc_ = acc_+1
-        acc[epoch,0]=(acc_/len(validset))
-        print(acc)
+            result += np.sum(np.equal(targ,pred))
         print(f'Valid loss={loss / (i + 1)} at epoch {epoch}')
-    #init_=model.init
-    #np.savetxt(init_+'.txt', loss_vector, delimiter=',', fmt='%10.5f')
+        print(f'Valid accuracy={result/len((validset.dataset))} at epoch {epoch}')
+    return loss_vector
 
 if __name__ == '__main__':
-    epochs =13
+    epochs =2
     batch_size = 128
+    Plot_loss_ = True
 
     model = NN()
     trainset, validset = load_dataset(batch_size)
-
-
-    main(model=model,
-         trainset=trainset,
-         validset=validset,
-         epochs=epochs)
+    
+    if Plot_loss_ == True:
+        init ={'zeros','normal', 'glorot'}
+        for inits in init:
+            model = NN(init=inits)
+            print(inits)
+            loss_vector=main(model=model,
+                             trainset=trainset,
+                             validset=validset,
+                             epochs=10)
+            plot_loss(loss_vector)
 
