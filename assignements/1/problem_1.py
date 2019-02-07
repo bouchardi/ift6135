@@ -87,22 +87,17 @@ class NN(object):
         return -np.log((prediction * target).sum(axis=0)).mean()
 
     def backward(self, target, prediction, cache):
-        grad_f = - (target - prediction)
-
-        grad_W3 = np.dot(grad_f, cache[2][0].T)
-        grad_b3 = grad_f
-        grad_h2 = np.dot(self.W[2], grad_f)
-        grad_a2 = np.multiply(grad_h2, self._sigmoid_deriv(cache[2][1]))
-
-        grad_W2 = np.dot(grad_a2, cache[1][0].T)
-        grad_b2 = grad_a2
-        grad_h1 = np.dot(self.W[1], grad_a2)
-        grad_a1 = np.multiply(grad_h1, self._sigmoid_deriv(cache[1][1]))
-
-        grad_W1 = np.dot(grad_a1, cache[0][0].T)
-        grad_b1 = grad_a1
-
-        return [grad_W1.T, grad_W2.T, grad_W3.T]
+        grads_W = []
+        grad_a = - (target - prediction)
+        for i in range(len(cache) - 1):
+            index = len(cache) - i - 2
+            grad_W = np.dot(grad_a, cache[index][0].T)
+            grad_b = grad_a
+            if index:
+                grad_h = np.dot(self.W[index], grad_a)
+                grad_a = np.multiply(grad_h, self._sigmoid_deriv(cache[index][1]))
+            grads_W.append(grad_W.T)
+        return [g for g in reversed(grads_W)]
 
     def update_weights(self, grads):
         if not self.train:
