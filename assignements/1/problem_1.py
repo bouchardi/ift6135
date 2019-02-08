@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 # TODO:
 # - HP search
 # - Complete check_grads?!
+# - Divide grads gy batch_size?
 
 
 class NN(object):
@@ -166,7 +167,7 @@ def check_grads(model, batch, p=1):
     for k in range(5):
         N = 10**k
         num_grads = get_numerical_grads(model_input, target, model, N, p)
-        diff.append(np.max(grads[2][0][:p, :model.W[2].shape[1]] - num_grads[:p, :model.W[2].shape[1]]))
+        diff.append(np.max(abs(grads[2][0][:p, :model.W[2].shape[1]] - num_grads[:p, :model.W[2].shape[1]])))
         legends.append(f'N = {N}')
 
 #    plt.plot(diff)
@@ -174,10 +175,10 @@ def check_grads(model, batch, p=1):
 #    plt.show()
 #    import pdb; pdb.set_trace()
 
-        for i in range(100, 100 + p):
-            for j in range(model.W[2].shape[1]):
+        #for i in range(p):
+        #    for j in range(model.W[2].shape[1]):
                 # num_grad = 0 for all j != target!
-                print(f'{i},{j} grads {grads[2][0][i, j]}, num_grads {num_grads[i, j]}')
+        #        print(f'{i},{j} grads {grads[2][0][i, j]}, num_grads {num_grads[i, j]}')
 
 
 def get_numerical_grads(X, y, model, N, p):
@@ -233,9 +234,9 @@ def train(model, trainset, validset, epochs):
             best_W = model.W.copy()
             best_b = model.b.copy()
 
-    #for batch in trainset:
-    #    check_grads(model, batch)
-    #    break
+    for batch in trainset:
+        check_grads(model, batch)
+        break
 
     model.W = best_W
     model.b = best_b
@@ -271,8 +272,8 @@ def preprocess(batch, n_class=10):
 
 
 if __name__ == '__main__':
-    epochs = 12
-    batch_size = 128
+    epochs = 2
+    batch_size = 256
     lr = 1.e-2
     plot = False
     init_methods = ['glorot']
