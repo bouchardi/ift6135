@@ -1,4 +1,5 @@
 import numpy as np
+import argparse
 
 from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
@@ -7,9 +8,9 @@ import matplotlib.pyplot as plt
 
 
 # TODO:
-# - HP search
-# - Complete check_grads?!
-# - Divide grads gy batch_size?
+# - Plot check_grads?!
+# - Divide grads and loss by batch_size?
+# - Save best accuracy test, valid
 
 
 class NN(object):
@@ -137,18 +138,6 @@ class NN(object):
     def eval(self):
         self.train = False
 
-
-def plot_loss(loss_vector):
-    t = np.arange(loss_vector.size)
-    plt.ylabel('Average Loss')
-    plt.xlabel('Epoch')
-    plt.title('Initialization Effect')
-    plt.grid(True)
-    plt.xlim(0, 9)
-    plt.plot(t, loss_vector)
-    plt.legend(('Zero', 'Normal', 'Glorot'), loc='upper right')
-    plt.show()
-
 def get_accuracy(target, prediction):
     res = np.argmax(target, axis=0) == np.argmax(prediction, axis=0)
     return len(res[res]) / len(res)
@@ -170,15 +159,9 @@ def check_grads(model, batch, p=1):
         diff.append(np.max(abs(grads[2][0][:p, :model.W[2].shape[1]] - num_grads[:p, :model.W[2].shape[1]])))
         legends.append(f'N = {N}')
 
-#    plt.plot(diff)
-#    plt.legend(legends)
-#    plt.show()
-#    import pdb; pdb.set_trace()
-
-        #for i in range(p):
-        #    for j in range(model.W[2].shape[1]):
-                # num_grad = 0 for all j != target!
-        #        print(f'{i},{j} grads {grads[2][0][i, j]}, num_grads {num_grads[i, j]}')
+    plt.plot(diff)
+    plt.legend(legends)
+    plt.show()
 
 
 def get_numerical_grads(X, y, model, N, p):
@@ -197,9 +180,9 @@ def get_numerical_grads(X, y, model, N, p):
             perturb[i, j] = 0
     return num_grad
 
-def train(model, trainset, validset, epochs):
+def train(model, trainset, validset, epochs, check_grad=False):
     loss_vector = np.zeros([epochs, 1])
-
+    patience = 0
     best_accuracy = 0
     best_W = None
     best_b = None
@@ -233,10 +216,17 @@ def train(model, trainset, validset, epochs):
             best_accuracy = accuracy / (i + 1)
             best_W = model.W.copy()
             best_b = model.b.copy()
+            patience = 0
+        else:
+            patience += 1
 
-    for batch in trainset:
-        check_grads(model, batch)
-        break
+        if patience > 2:
+            break
+
+    if check_grad:
+        for batch in trainset:
+            check_grads(model, batch)
+            break
 
     model.W = best_W
     model.b = best_b
@@ -271,21 +261,41 @@ def preprocess(batch, n_class=10):
     return model_input, target_one_hot
 
 
-if __name__ == '__main__':
-    epochs = 2
-    batch_size = 256
-    lr = 1.e-2
-    plot = False
-    init_methods = ['glorot']
-    # init_methods = ['zeros', 'normal', 'glorot']
+def plot_loss(loss_vector, epochs, legend):
+    t = np.arange(loss_vector.size)
+    plt.ylabel('Average Loss')
+    plt.xlabel('Epoch')
+    plt.title('Initialization Effect')
+    plt.grid(True)
+    plt.xlim(0, epochs)
+    plt.plot(t, loss_vector)
+    plt.legend(legend, loc='upper right')
+    plt.show()
 
-    trainset, validset = load_dataset(batch_size)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--epochs', default=20, type=int)
+    parser.add_argument('--batch_size', default=256, type=int)
+    parser.add_argument('--lr', default=1.e-2, type=float)
+    parser.add_argument('--activation', default='sigmoid')
+    parser.add_argument('--init', default='glorot')
+    parser.add_argument('--h1', default=512, type=int)
+    parser.add_argument('--h2', default=1024, type=int)
+    args = parser.parse_args()
+
+    init_methods = ['zeros', 'normal', 'glorot'] if args.init == 'all' else [args.init]
+
+    trainset, validset = load_dataset(args.batch_size)
 
     for init in init_methods:
-        model = NN(init=init, lr=lr)
+        model = NN(hidden_layers_size=[args.h1, args.h2],
+                   init=init,
+                   activation=args.activation,
+                   lr=args.lr)
+
         loss_vector = train(model=model,
                                 trainset=trainset,
                                 validset=validset,
-                                epochs=epochs)
-    if plot:
-        plot_loss(loss_vector)
+                                epochs=args.epochs)
+    if args.init == 'all':
+        plot_loss(loss_vector, epochs=args.epochs, legend=init_methods)
