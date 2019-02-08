@@ -150,7 +150,6 @@ def main(model, trainset, validset, testset, epochs, learning_rate):
     plot_loss(train_error,eval_error)
 
     #Testing the model
-
     print("Testing begins...")
     # model in eval mode
     model.eval()
@@ -165,7 +164,6 @@ def main(model, trainset, validset, testset, epochs, learning_rate):
         _, predicted = torch.max(outputs.data, 1)
 
         # save the accuary
-
         total += labels.size(0)
         correct += torch.sum(predicted == labels.data)
 
@@ -185,7 +183,6 @@ if __name__ == '__main__':
     # Save the initial weights of model
     init_model_wts = copy.deepcopy(model.state_dict())
 
-    #replace this with the import file
     trainset, validset, testset = MNIST_Loader.load_dataset(batch_size)
 
 
