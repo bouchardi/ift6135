@@ -82,7 +82,6 @@ class NN(object):
     def _linear_deriv(self, X):
         return 1
 
-
     def _add_bias(self, h, W, b):
         h = np.concatenate([h, np.ones((1, h.shape[1]))], axis=0)
         W = np.concatenate([W, b])
@@ -138,27 +137,26 @@ class NN(object):
     def eval(self):
         self.train = False
 
-def get_accuracy(target, prediction):
-    res = np.argmax(target, axis=0) == np.argmax(prediction, axis=0)
-    return len(res[res]) / len(res)
 
 def check_grads(model, batch, p=1):
     model_input, target = preprocess(batch)
-    # Only one example
+    # Keep only one example
     model_input = model_input[:, :1]
     target = target[:, :1]
-
+    # Get the grads
     prediction, cache = model.forward(model_input)
     grads = model.backward(target, prediction, cache)
-
+    # Get the numerical approximation of grads for p values for different values of N
     diff = []
     legends = []
     for k in range(5):
         N = 10**k
+        # Get the numerical app gradients
         num_grads = get_numerical_grads(model_input, target, model, N, p)
+        # Compare the numerical and the 'real' gradients
         diff.append(np.max(abs(grads[2][0][:p, :model.W[2].shape[1]] - num_grads[:p, :model.W[2].shape[1]])))
         legends.append(f'N = {N}')
-
+    # Plot the difference
     plt.plot(diff)
     plt.legend(legends)
     plt.show()
@@ -179,6 +177,12 @@ def get_numerical_grads(X, y, model, N, p):
             num_grad[i, j] = (loss2 - loss1) / (2 * e)
             perturb[i, j] = 0
     return num_grad
+
+
+def get_accuracy(target, prediction):
+    res = np.argmax(target, axis=0) == np.argmax(prediction, axis=0)
+    return len(res[res]) / len(res)
+
 
 def train(model, trainset, validset, epochs, check_grad=False):
     loss_vector = np.zeros([epochs, 1])
