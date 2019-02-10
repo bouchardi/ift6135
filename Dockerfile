@@ -2,4 +2,5 @@ FROM pytorch/pytorch
 
 WORKDIR /project
 
-RUN pip install ipdb
+RUN pip install ipdb && \
+    pip install matplotlib
