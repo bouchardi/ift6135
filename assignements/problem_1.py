@@ -6,11 +6,13 @@ import torchvision.datasets as datasets
 from torchvision import transforms
 import matplotlib.pyplot as plt
 
+import MNIST_Loader
+
 
 # TODO:
 # - Plot check_grads?!
 # - Divide grads and loss by batch_size?
-# - Save best accuracy test, valid
+# - Test, valid set same same?
 
 
 class NN(object):
@@ -184,7 +186,7 @@ def get_accuracy(target, prediction):
     return len(res[res]) / len(res)
 
 
-def train(model, trainset, validset, epochs, check_grad=False):
+def train(model, trainset, validset, testset, epochs, check_grad=False):
     loss_vector = np.zeros([epochs, 1])
     patience = 0
     best_accuracy = 0
@@ -234,24 +236,16 @@ def train(model, trainset, validset, epochs, check_grad=False):
 
     model.W = best_W
     model.b = best_b
-    return loss_vector
 
+    test_accuracy = 0
+    model.eval()
+    for j, batch in enumerate(testset):
+        model_input, target = preprocess(batch)
+        prediction, _ = model.forward(model_input)
+        test_accuracy += get_accuracy(target, prediction)
+    print(f'Test accuracy={test_accuracy / (j+1)}')
 
-def load_dataset(batch_size, data_path='./data'):
-    transform = transforms.Compose([transforms.ToTensor()])
-    trainset = DataLoader(dataset=datasets.MNIST(root=data_path,
-                                                 train=True,
-                                                 download=True,
-                                                 transform=transform),
-                          batch_size=batch_size,
-                          shuffle=True)
-    testset = DataLoader(dataset=datasets.MNIST(root=data_path,
-                                                train=False,
-                                                download=True,
-                                                transform=transform),
-                         batch_size=batch_size,
-                         shuffle=True)
-    return trainset, testset
+    return loss_vector, accuracy / (i+1), test_accuracy / (j+1)
 
 
 def preprocess(batch, n_class=10):
@@ -289,7 +283,7 @@ if __name__ == '__main__':
 
     init_methods = ['zeros', 'normal', 'glorot'] if args.init == 'all' else [args.init]
 
-    trainset, validset = load_dataset(args.batch_size)
+    trainset, validset, testset = MNIST_Loader.load_dataset(args.batch_size)
 
     for init in init_methods:
         model = NN(hidden_layers_size=[args.h1, args.h2],
@@ -297,9 +291,14 @@ if __name__ == '__main__':
                    activation=args.activation,
                    lr=args.lr)
 
-        loss_vector = train(model=model,
-                                trainset=trainset,
-                                validset=validset,
-                                epochs=args.epochs)
+        results = train(model=model,
+                        trainset=trainset,
+                        validset=validset,
+                        testset=validset,
+                        epochs=args.epochs)
+        loss_vector, valid_accuracy, test_accuracy = results
+        with open('hp_results.txt', 'a') as text_file:
+            text_file.write(f'{args.epochs} {args.batch_size} {args.lr} {args.activation} {args.init} {args.h1} {args.h2} {valid_accuracy} {test_accuracy}\n')
+
     if args.init == 'all':
         plot_loss(loss_vector, epochs=args.epochs, legend=init_methods)
