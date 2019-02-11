@@ -3,6 +3,7 @@ FROM pytorch/pytorch
 WORKDIR /project
 
 RUN pip install ipdb && \
-    pip install matplotlib
+    pip install matplotlib && \
+    pip install torchvision
 
 COPY assignements/ /project/assignements/
