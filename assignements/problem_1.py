@@ -193,6 +193,7 @@ def train(model, trainset, validset, testset, epochs, check_grad=False):
     best_b = None
 
     for epoch in range(epochs):
+
         # Training
         loss = 0
         model.training()
@@ -229,6 +230,7 @@ def train(model, trainset, validset, testset, epochs, check_grad=False):
             break
 
     if check_grad:
+        # Hack to get the first batch only
         for batch in trainset:
             check_grads(model, batch)
             break
@@ -293,10 +295,10 @@ if __name__ == '__main__':
         results = train(model=model,
                         trainset=trainset,
                         validset=validset,
-                        testset=validset,
+                        testset=testset,
                         epochs=args.epochs)
         loss_vector, valid_accuracy, test_accuracy = results
-        with open('hp_results.txt', 'a') as text_file:
+        with open('/project/hp_results.txt', 'a') as text_file:
             text_file.write(f'{args.epochs} {args.batch_size} {args.lr} {args.activation} {args.init} {args.h1} {args.h2} {valid_accuracy} {test_accuracy}\n')
 
     if args.init == 'all':

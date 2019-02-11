@@ -4,3 +4,5 @@ WORKDIR /project
 
 RUN pip install ipdb && \
     pip install matplotlib
+
+COPY assignements/ /project/assignements/
