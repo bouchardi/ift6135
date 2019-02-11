@@ -11,7 +11,6 @@ import MNIST_Loader
 
 # TODO:
 # - Plot check_grads?!
-# - Divide grads and loss by batch_size?
 # - Test, valid set same same?
 
 
@@ -120,18 +119,18 @@ class NN(object):
         for i in range(len(cache) - 1):
             index = len(cache) - i - 2
             grad_W = np.dot(grad_a, cache[index][0].T)
-            grad_b = grad_a
+            grad_b = np.sum(grad_a, axis=1)
             if index:
                 grad_h = np.dot(self.W[index], grad_a)
                 grad_a = np.multiply(grad_h, self.activation_deriv_f(cache[index][1]))
-            grads.append((grad_W.T, np.sum(grad_b.T, axis=0)))
+            grads.append((grad_W.T, grad_b))
         return [g for g in reversed(grads)]
 
-    def update_weights(self, grads):
+    def update_weights(self, grads, batch_size):
         if not self.train:
             raise Exception('You should not update weights while validating/testing')
-        self.W = [self.W[i] - (self.lr * grads[i][0]) for i in range(len(self.W))]
-        self.b = [self.b[i] - (self.lr * grads[i][1]) for i in range(len(self.W))]
+        self.W = [self.W[i] - (self.lr * grads[i][0] / batch_size) for i in range(len(self.W))]
+        self.b = [self.b[i] - (self.lr * grads[i][1] / batch_size) for i in range(len(self.W))]
 
     def training(self):
         self.train = True
@@ -201,7 +200,7 @@ def train(model, trainset, validset, testset, epochs, check_grad=False):
             model_input, target = preprocess(batch)
             prediction, cache = model.forward(model_input)
             grads = model.backward(target, prediction, cache)
-            model.update_weights(grads)
+            model.update_weights(grads, batch_size=len(batch))
             loss += model.loss(prediction, target)
         loss_vector[epoch, 0] = loss / (i+1)
         print(f'Train loss={loss / (i + 1)} at epoch {epoch}')
