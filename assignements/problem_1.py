@@ -9,11 +9,6 @@ import matplotlib.pyplot as plt
 import MNIST_Loader
 
 
-# TODO:
-# - Plot check_grads?!
-# - Test, valid set same same?
-
-
 class NN(object):
 
     def __init__(self,
